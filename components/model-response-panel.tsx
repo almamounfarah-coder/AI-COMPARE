@@ -46,8 +46,15 @@ export function ModelResponsePanel({ model, prompt, promptId }: ModelResponsePan
       })
 
       if (!res.ok) {
-        const errText = await res.text()
-        throw new Error(errText || `HTTP ${res.status}`)
+        let errorMessage = `HTTP ${res.status}`
+        try {
+          const errJson = await res.json()
+          errorMessage = errJson.error || errorMessage
+        } catch {
+          const errText = await res.text()
+          errorMessage = errText || errorMessage
+        }
+        throw new Error(errorMessage)
       }
 
       const reader = res.body!.getReader()

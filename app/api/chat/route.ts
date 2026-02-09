@@ -25,7 +25,10 @@ async function streamGoogle(
 ): Promise<Response> {
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY
   if (!apiKey) {
-    return new Response("GOOGLE_GENERATIVE_AI_API_KEY not set", { status: 500 })
+    return new Response(
+      JSON.stringify({ error: "GOOGLE_GENERATIVE_AI_API_KEY not set" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    )
   }
 
   const modelName = model.replace("google/", "")
@@ -68,7 +71,10 @@ async function streamMistral(
 ): Promise<Response> {
   const apiKey = process.env.MISTRAL_API_KEY
   if (!apiKey) {
-    return new Response("MISTRAL_API_KEY not set", { status: 500 })
+    return new Response(
+      JSON.stringify({ error: "MISTRAL_API_KEY not set" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    )
   }
 
   const modelName = model.replace("mistral/", "")
