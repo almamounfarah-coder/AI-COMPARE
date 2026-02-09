@@ -193,8 +193,26 @@ export async function POST(req: Request) {
   const { messages, model }: { messages: UIMessage[]; model: string } =
     await req.json()
 
+  // Validate model is supported
+  if (!model || typeof model !== "string") {
+    return new Response(
+      JSON.stringify({ error: "Invalid model: model must be a non-empty string" }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    )
+  }
+
   if (model.startsWith("mistral/")) {
     return streamMistral(model, messages, req.signal)
   }
-  return streamGoogle(model, messages, req.signal)
+
+  if (model.startsWith("google/")) {
+    return streamGoogle(model, messages, req.signal)
+  }
+
+  return new Response(
+    JSON.stringify({
+      error: `Unsupported model: "${model}". Supported models must start with "google/" or "mistral/"`,
+    }),
+    { status: 400, headers: { "Content-Type": "application/json" } }
+  )
 }
