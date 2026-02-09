@@ -54,6 +54,7 @@ export function ModelResponsePanel({ model, prompt, promptId }: ModelResponsePan
       const decoder = new TextDecoder()
       let buffer = ""
       let fullText = ""
+      let streamFinished = false
 
       while (true) {
         const { done, value } = await reader.read()
@@ -74,14 +75,30 @@ export function ModelResponsePanel({ model, prompt, promptId }: ModelResponsePan
             if (parsed.type === "text-delta" && parsed.textDelta) {
               fullText += parsed.textDelta
               setResponseText(fullText)
+            } else if (parsed.type === "error") {
+              throw new Error(parsed.error || "Stream error from server")
+            } else if (parsed.type === "finish") {
+              streamFinished = true
             }
-          } catch {
-            // skip
+          } catch (parseErr) {
+            if (parseErr instanceof Error && parseErr.message.startsWith("Stream error")) {
+              throw parseErr
+            }
+            // skip unparseable chunks
           }
         }
       }
 
-      setStatus("done")
+      if (streamFinished) {
+        setStatus("done")
+      } else if (fullText.length > 0) {
+        // Stream ended without explicit finish event - could be premature termination
+        // but we have partial content, so treat as successful completion
+        setStatus("done")
+      } else {
+        // Stream ended with no content and no finish event - treat as error
+        throw new Error("Stream ended unexpectedly")
+      }
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") return
       setError(err instanceof Error ? err.message : "Failed to get response")

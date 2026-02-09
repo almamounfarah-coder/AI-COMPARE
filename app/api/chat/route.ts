@@ -162,6 +162,12 @@ function transformSSE(
         )
       } catch (err) {
         console.error("[v0] Stream error:", err)
+        const errorMessage = err instanceof Error ? err.message : "Unknown error"
+        controller.enqueue(
+          encoder.encode(
+            `data: ${JSON.stringify({ type: "error", error: errorMessage })}\n\n`
+          )
+        )
       } finally {
         controller.close()
       }
