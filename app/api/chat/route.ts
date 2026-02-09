@@ -121,7 +121,13 @@ function transformSSE(
 
   const readable = new ReadableStream({
     async start(controller) {
-      const reader = upstream.body!.getReader()
+      if (!upstream.body) {
+        console.error("[v0] Stream error: upstream response has no body")
+        controller.close()
+        return
+      }
+
+      const reader = upstream.body.getReader()
       let buffer = ""
       const messageId = crypto.randomUUID()
 
