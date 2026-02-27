@@ -3,18 +3,26 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import type { ModelConfig } from "@/lib/models"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Copy, Check, RotateCcw } from "lucide-react"
+import { Copy, Check, RotateCcw, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface ModelResponsePanelProps {
   model: ModelConfig
   prompt: string | null
   promptId: number
+  isBest: boolean
+  onMarkBest: (modelId: string) => void
 }
 
 type PanelStatus = "idle" | "streaming" | "done" | "error"
 
-export function ModelResponsePanel({ model, prompt, promptId }: ModelResponsePanelProps) {
+export function ModelResponsePanel({
+  model,
+  prompt,
+  promptId,
+  isBest,
+  onMarkBest,
+}: ModelResponsePanelProps) {
   const [copied, setCopied] = useState(false)
   const [responseText, setResponseText] = useState("")
   const [status, setStatus] = useState<PanelStatus>("idle")
@@ -171,6 +179,16 @@ export function ModelResponsePanel({ model, prompt, promptId }: ModelResponsePan
               <Button
                 variant="ghost"
                 size="icon"
+                className={`h-7 w-7 ${isBest ? "text-yellow-500" : "text-muted-foreground hover:text-foreground"}`}
+                onClick={() => onMarkBest(model.id)}
+                aria-label="Mark as best response"
+                title="Mark as best"
+              >
+                <Trophy className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-foreground"
                 onClick={handleRetry}
                 aria-label="Retry response"
@@ -208,6 +226,11 @@ export function ModelResponsePanel({ model, prompt, promptId }: ModelResponsePan
             </div>
           ) : responseText ? (
             <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap break-words">
+              {isBest && (
+                <div className="inline-flex items-center gap-1 mb-2 px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-600 text-xs font-medium">
+                  <Trophy className="h-3 w-3" /> Best for this prompt
+                </div>
+              )}
               {responseText}
               {isLoading && (
                 <span
