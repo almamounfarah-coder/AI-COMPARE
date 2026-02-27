@@ -10,11 +10,19 @@ import { WelcomeScreen } from "@/components/welcome-screen"
 import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
+interface PromptHistoryItem {
+  id: number
+  text: string
+  createdAt: number
+}
+
 export function MultiChat() {
   const [selectedModels, setSelectedModels] = useState<string[]>(DEFAULT_MODELS)
   const [currentPrompt, setCurrentPrompt] = useState<string | null>(null)
   const [promptId, setPromptId] = useState(0)
   const [isStreaming, setIsStreaming] = useState(false)
+  const [history, setHistory] = useState<PromptHistoryItem[]>([])
+  const [bestModelByPrompt, setBestModelByPrompt] = useState<Record<number, string>>({})
 
   const handleToggleModel = useCallback((modelId: string) => {
     setSelectedModels((prev) => {
@@ -28,13 +36,18 @@ export function MultiChat() {
 
   const handleSend = useCallback(
     (message: string) => {
+      const nextPromptId = promptId + 1
       setCurrentPrompt(message)
-      setPromptId((prev) => prev + 1)
+      setPromptId(nextPromptId)
+      setHistory((prev) => [
+        { id: nextPromptId, text: message, createdAt: Date.now() },
+        ...prev,
+      ].slice(0, 10))
       setIsStreaming(true)
       // Auto-disable after reasonable time
       setTimeout(() => setIsStreaming(false), 30000)
     },
-    []
+    [promptId]
   )
 
   const handleClear = useCallback(() => {
@@ -42,6 +55,18 @@ export function MultiChat() {
     setPromptId(0)
     setIsStreaming(false)
   }, [])
+
+  const handleReusePrompt = useCallback((item: PromptHistoryItem) => {
+    setCurrentPrompt(item.text)
+    setPromptId(item.id)
+    setIsStreaming(true)
+    setTimeout(() => setIsStreaming(false), 30000)
+  }, [])
+
+  const handleMarkBest = useCallback((modelId: string) => {
+    if (!promptId) return
+    setBestModelByPrompt((prev) => ({ ...prev, [promptId]: modelId }))
+  }, [promptId])
 
   const activeModels = AVAILABLE_MODELS.filter((m) =>
     selectedModels.includes(m.id)
@@ -88,6 +113,24 @@ export function MultiChat() {
               <p className="text-xs text-muted-foreground mb-1">Your prompt</p>
               <p className="text-sm text-foreground">{currentPrompt}</p>
             </div>
+            {history.length > 0 && (
+              <div className="max-w-3xl mx-auto mt-3">
+                <p className="text-xs text-muted-foreground mb-2">Recent prompts</p>
+                <div className="flex flex-wrap gap-2">
+                  {history.map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleReusePrompt(item)}
+                      className="px-2.5 py-1 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors max-w-[240px] truncate"
+                      title={item.text}
+                    >
+                      {item.text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Model response grid */}
@@ -98,6 +141,8 @@ export function MultiChat() {
                 model={model}
                 prompt={currentPrompt}
                 promptId={promptId}
+                isBest={bestModelByPrompt[promptId] === model.id}
+                onMarkBest={handleMarkBest}
               />
             ))}
           </div>
